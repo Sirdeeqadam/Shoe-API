@@ -1,73 +1,75 @@
-
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <title>myShoes</title>
-        <link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
-        <link href="/styles.css" rel="stylesheet" />
-    </head>
-    <body>
+<head>
+    <meta charset="utf-8">
+    <title>myShoes</title>
+    <link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+    <link href="/styles.css" rel="stylesheet" />
+</head>
+<body>
 
-        <h1 class="title">myShoe Store</h1>
-        <div id="homepage">
-            <h1>Buy A Shoe At Your Nearest Location!</h1>
-            <div id="shoes"></div>
-        </div>
+    <h1 class="title">myShoe Store</h1>
+    <div id="homepage">
+        <h1>Find Your Perfect Pair.</h1>
+        <div id="shoes"></div>
+    </div>
 
-        <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-        <script src="https://unpkg.com/react@15/dist/react.js"></script>
-        <script src="https://unpkg.com/react-dom@15/dist/react-dom.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://unpkg.com/react@15/dist/react.js"></script>
+    <script src="https://unpkg.com/react-dom@15/dist/react-dom.min.js"></script>
 
-        <script type="text/babel">
-        var Shoes = React.createClass({
+    <script type="text/babel">
+    var Shoes = React.createClass({
         getInitialState: function() {
             return { shoes: [] };
         },
-        render: function() {
-            var shoes = this.state.shoes.map(function(shoe, index) {
-                return (
-                    <li key={index}>
-                        <span className={shoe.available ? "available" : "unavailable"}></span>
-                        <span className="name">{shoe.name}</span>
-                        <span className="brand">{shoe.brand || "N/A"}</span>
-                        <span className="category">{shoe.category || "N/A"}</span>
-                        <span className="price">{shoe.price ? `$${shoe.price}` : "N/A"}</span>
-                        {shoe.dist ? <span className="dist">{(shoe.dist.calculated / 1000).toFixed(2)} km</span> : null}
-                    </li>
-                );
-            });
 
-            return (
-                <div id="shoe-container">
-                    <form id="search" onSubmit={this.handleSubmit}>
-                        <label>Enter your Longitude:</label>
-                        <input type="text" ref="lng" placeholder="longitude" required />
-                        <label>Enter your Latitude:</label>
-                        <input type="text" ref="lat" placeholder="latitude" required />
-                        <input type="submit" value="Find Shoes" />
-                    </form>
-                    <ul>{shoes}</ul>
-                </div>
-            );
-        },
-        handleSubmit: function(e) {
-            e.preventDefault();
-            var lng = this.refs.lng.value;
-            var lat = this.refs.lat.value;
+        fetchShoes: function(brand = "") {
+            let query = [];
+            if (brand) query.push(`brand=${encodeURIComponent(brand)}`);
 
-            fetch(`/api/shoes?lng=${lng}&lat=${lat}`)
+            fetch(`/api/shoes?${query.join("&")}`)
                 .then(res => res.json())
                 .then(json => {
                     this.setState({ shoes: json });
                 });
+        },
+
+        handleSubmit: function(e) {
+            e.preventDefault();
+            const brand = this.refs.brand.value;
+            this.fetchShoes(brand);
+        },
+
+        render: function() {
+            const shoes = this.state.shoes.map((shoe, index) => (
+                <li key={index}>
+                    <strong>{shoe.name}</strong> — 
+                    {shoe.brand || "N/A"} | 
+                    {shoe.category || "N/A"} | 
+                    {shoe.price ? `$${shoe.price}` : "N/A"}<br/>
+                    {shoe.imageURL && <img src={shoe.imageURL} width="100" alt={shoe.name} />}
+
+                </li>
+            ));
+
+            return (
+                <div id="shoe-container">
+                    <form id="search" onSubmit={this.handleSubmit}>
+                        <label>Search by Brand:</label>
+                        <input type="text" ref="brand" placeholder="e.g. Nike" />
+                        <input type="submit" value="Find Shoes" />
+                    </form>
+
+                    <h3>Shoes</h3>
+                    <ul>{shoes}</ul>
+                </div>
+            );
         }
     });
 
     ReactDOM.render(<Shoes />, document.getElementById('shoes'));
-</script>
+    </script>
 
-
-
-    </body>
+</body>
 </html>

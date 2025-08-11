@@ -1,36 +1,33 @@
-
 const express = require('express');
+const cors = require('cors'); // <-- Import CORS first
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 
-// Load environment variables from .env file
+// Load environment variables
 dotenv.config();
 
-const app = express();
-const PORT = process.env.PORT || 4000;
+const app = express(); // <-- Initialize app BEFORE using it
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => {
-        console.log("Database connected successfully! ✅");
-    })
-    .catch(err => {
-        console.error("Database connection error: ❌", err);
-    });
-
-app.use(express.static('public'))
+app.use(cors()); // <-- Now you can use it
+app.use(express.static('public'));
 app.use(bodyParser.json());
 
-// Initialize routes
+// MongoDB connection
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log("Database connected successfully! ✅"))
+    .catch(err => console.error("Database connection error ❌", err));
+
+// Routes
 app.use('/api', require('./routes/api'));
 
-// Error handling middleware
-app.use(function(err, req, res, next){
-    res.status(422).send({error: err.message});
+
+// Error handler
+app.use(function (err, req, res, next) {
+    res.status(422).send({ error: err.message });
 });
 
-
+const PORT = process.env.PORT || 4100;
 app.listen(PORT, () => {
     console.log(`listening on port ${PORT}`);
 });

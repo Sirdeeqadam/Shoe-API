@@ -1,64 +1,24 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const { storage } = require('../utils/cloudinary');
+const upload = multer({ storage });
+
 const Shoe = require('../models/shoe');
 
-// GET /api/shoes — returns all shoes or nearby if lat/lng provided
-
-// router.get('/shoes', async (req, res, next) => {
-//     const { lng, lat } = req.query;
-
-//     try {
-//         let ninjas;
-
-//         if (lng && lat) {
-//             shoes = await Shoe.aggregate([
-//                 {
-//                     $geoNear: {
-//                         near: {
-//                             type: 'Point',
-//                             coordinates: [parseFloat(lng), parseFloat(lat)]
-//                         },
-//                         distanceField: 'dist.calculated',
-//                         maxDistance: 100000,
-//                         spherical: true
-//                     }
-//                 }
-//             ]);
-//         } else {
-//             shoes = await Shoe.find({});
-//         }
-
-//         res.send(shoes);
-//     } catch (err) {
-//         next(err);
-//     }
-// });
-
-
-// GET /api/shoes — returns shoes near provided lat/lng if available
+// GET shoes
 router.get('/shoes', async (req, res, next) => {
-    const { lng, lat } = req.query;
+    const { brand } = req.query;
 
     try {
         let shoes;
 
-        if (lng && lat) {
-            shoes = await Shoe.aggregate([
-                {
-                    $geoNear: {
-                        near: {
-                            type: 'Point',
-                            coordinates: [parseFloat(lng), parseFloat(lat)]
-                        },
-                        distanceField: 'dist.calculated',
-                        maxDistance: 100000, // 100 km
-                        spherical: true,
-                        query: { available: true } // ✅ only available shoes
-                    }
-                }
-            ]);
+        if (brand) {
+            shoes = await Shoe.find({
+                brand: { $regex: new RegExp(brand, 'i') }
+            });
         } else {
-            shoes = await Shoe.find({ available: true });
+            shoes = await Shoe.find({});
         }
 
         res.send(shoes);
@@ -67,48 +27,61 @@ router.get('/shoes', async (req, res, next) => {
     }
 });
 
-
-
-// POST /api/shoes — Create a shoe
-
-router.post('/shoes', async (req, res, next) => {
+// POST shoe using image URL
+router.post('/shoes/url', async (req, res, next) => {
     try {
-        const shoe = await Shoe.create(req.body);
+        const { name, brand, category, price, imageURL } = req.body;
+
+        const shoe = new Shoe({
+            name,
+            brand,
+            category,
+            price,
+            imageURL // directly saving the image URL
+        });
+
+        await shoe.save();
         res.status(201).send(shoe);
     } catch (err) {
         next(err);
     }
 });
 
-// PUT /api/shoes/:id — Update a shoe
-
+// UPDATE shoe
 router.put('/shoes/:id', async (req, res, next) => {
     try {
-        const shoe = await Shoe.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true }
-        );
+        const { id } = req.params;
+        const updatedData = req.body;
 
-        if (!shoe) return res.status(404).send({ error: 'Shoe not found' });
+        const updatedShoe = await Shoe.findByIdAndUpdate(id, updatedData, {
+            new: true,
+            runValidators: true
+        });
 
-        res.send(shoe);
+        if (!updatedShoe) {
+            return res.status(404).send({ message: 'Shoe not found' });
+        }
+
+        res.send(updatedShoe);
     } catch (err) {
         next(err);
     }
 });
 
-// DELETE /api/shoes/:id — Delete a shoe
-
-router.delete('/shoes/:id', async (req, res) => {
+// DELETE shoe
+router.delete('/shoes/:id', async (req, res, next) => {
     try {
-        const shoe = await Shoe.findByIdAndDelete(req.params.id);
+        const { id } = req.params;
 
-        if (!shoe) return res.status(404).send({ error: 'Shoe not found' });
+        const deletedShoe = await Shoe.findByIdAndDelete(id);
 
-        res.send({ message: 'Shoe deleted successfully', shoe });
+        if (!deletedShoe) {
+            return res.status(404).send({ message: 'Shoe not found' });
+        }
+
+        res.send({ message: 'Shoe deleted successfully' });
     } catch (err) {
-        res.status(500).send({ error: 'Failed to delete shoe' });
+        next(err);
     }
 });
 
